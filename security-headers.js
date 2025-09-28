@@ -1,18 +1,28 @@
 // Security Headers Configuration for Node.js/Express Server
-// Add this middleware to your Express app
+// ========================================================
+// 
+// This middleware provides comprehensive security headers for your Express application.
+// 
+// Usage:
+// const securityHeaders = require('./security-headers');
+// app.use(securityHeaders);
 
 const helmet = require('helmet');
 
-// Security middleware configuration
+// Comprehensive security headers configuration
 const securityHeaders = helmet({
-  // HTTP Strict Transport Security
+  // ========================================
+  // HTTP STRICT TRANSPORT SECURITY (HSTS)
+  // ========================================
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
   },
   
-  // Content Security Policy
+  // ========================================
+  // CONTENT SECURITY POLICY (CSP)
+  // ========================================
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -22,7 +32,8 @@ const securityHeaders = helmet({
         "'unsafe-eval'",
         "https://cdn.tailwindcss.com",
         "https://cdn.jsdelivr.net",
-        "https://www.gstatic.com"
+        "https://www.gstatic.com",
+        "https://cdnjs.cloudflare.com"
       ],
       styleSrc: [
         "'self'",
@@ -36,28 +47,41 @@ const securityHeaders = helmet({
       ],
       imgSrc: [
         "'self'",
-        "data:"
+        "data:",
+        "blob:"
       ],
       connectSrc: [
         "'self'",
-        "https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app"
+        "https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app",
+        "https://*.firebaseapp.com"
       ],
       frameAncestors: ["'self'"],
       baseUri: ["'self'"],
-      formAction: ["'self'"]
+      formAction: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+      blockAllMixedContent: []
     }
   },
   
-  // X-Frame-Options
+  // ========================================
+  // X-FRAME-OPTIONS
+  // ========================================
   frameguard: { action: 'sameorigin' },
   
-  // X-Content-Type-Options
+  // ========================================
+  // X-CONTENT-TYPE-OPTIONS
+  // ========================================
   noSniff: true,
   
-  // Referrer Policy
+  // ========================================
+  // REFERRER POLICY
+  // ========================================
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   
-  // Permissions Policy
+  // ========================================
+  // PERMISSIONS POLICY
+  // ========================================
   permissionsPolicy: {
     geolocation: [],
     microphone: [],
@@ -69,23 +93,130 @@ const securityHeaders = helmet({
     speaker: [],
     vibrate: [],
     fullscreen: ['self'],
-    syncXhr: []
+    syncXhr: [],
+    accelerometer: [],
+    ambientLightSensor: [],
+    autoplay: [],
+    battery: [],
+    bluetooth: [],
+    clipboardRead: [],
+    clipboardWrite: [],
+    crossOriginIsolated: [],
+    displayCapture: [],
+    documentDomain: [],
+    encryptedMedia: [],
+    executionWhileNotRendered: [],
+    executionWhileOutOfViewport: [],
+    focusWithoutUserActivation: [],
+    gamepad: [],
+    gyroscope: [],
+    hid: [],
+    identityCredentialsGet: [],
+    idleDetection: [],
+    localFonts: [],
+    magnetometer: [],
+    midi: [],
+    otpCredentials: [],
+    payment: [],
+    pictureInPicture: [],
+    publickeyCredentialsCreate: [],
+    publickeyCredentialsGet: [],
+    screenWakeLock: [],
+    serial: [],
+    storageAccess: [],
+    usb: [],
+    webShare: [],
+    xrSpatialTracking: []
   },
   
-  // Additional security headers
+  // ========================================
+  // ADDITIONAL SECURITY HEADERS
+  // ========================================
   xssFilter: true,
-  hidePoweredBy: true
+  hidePoweredBy: true,
+  dnsPrefetchControl: true,
+  ieNoOpen: true,
+  noSniff: true,
+  originAgentCluster: true,
+  permittedCrossDomainPolicies: false,
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: true
 });
+
+// Additional custom headers middleware
+const additionalHeaders = (req, res, next) => {
+  // Cache-Control for sensitive pages
+  if (req.path.endsWith('.html') || req.path.endsWith('.htm')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  
+  // Additional security headers
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  
+  next();
+};
+
+// CSP Violation Reporting Endpoint
+const cspReportHandler = (req, res) => {
+  if (req.method === 'POST' && req.is('application/json')) {
+    const violation = req.body;
+    
+    // Log the violation
+    console.log('CSP Violation:', JSON.stringify(violation, null, 2));
+    
+    // You can also store in database, send email, etc.
+    // database.logCSPViolation(violation);
+    
+    res.status(204).send(); // No Content
+  } else {
+    res.status(400).send('Bad Request');
+  }
+};
+
+// Security Headers Test Function
+const testSecurityHeaders = (req, res) => {
+  const headers = [
+    'Strict-Transport-Security',
+    'Content-Security-Policy',
+    'X-Frame-Options',
+    'X-Content-Type-Options',
+    'Referrer-Policy',
+    'Permissions-Policy'
+  ];
+  
+  const results = {};
+  headers.forEach(header => {
+    results[header] = res.get(header) || 'Not set';
+  });
+  
+  res.json({
+    status: 'Security Headers Test',
+    results: results,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Example Express app setup
+const express = require('express');
+const app = express();
 
 // Apply security headers
 app.use(securityHeaders);
+app.use(additionalHeaders);
 
-// Additional custom headers
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  next();
-});
+// CSP violation reporting endpoint
+app.post('/csp-report', cspReportHandler);
 
-module.exports = securityHeaders;
+// Security headers test endpoint
+app.get('/security-test', testSecurityHeaders);
+
+module.exports = {
+  securityHeaders,
+  additionalHeaders,
+  cspReportHandler,
+  testSecurityHeaders
+};

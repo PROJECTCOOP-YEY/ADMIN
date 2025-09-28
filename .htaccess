@@ -1,0 +1,131 @@
+# Security Headers Configuration for Apache Server
+# ========================================
+# COMPREHENSIVE SECURITY HEADERS
+# ========================================
+# Add these headers to your .htaccess file or server configuration
+# This provides maximum security for your website
+
+# Enable mod_headers if not already enabled
+<IfModule mod_headers.c>
+    # ========================================
+    # HTTP STRICT TRANSPORT SECURITY (HSTS)
+    # ========================================
+    # Forces HTTPS connections and prevents protocol downgrade attacks
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    
+    # ========================================
+    # CONTENT SECURITY POLICY (CSP)
+    # ========================================
+    # Prevents XSS attacks by controlling resource loading
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content;"
+    
+    # ========================================
+    # X-FRAME-OPTIONS
+    # ========================================
+    # Prevents clickjacking attacks by controlling iframe embedding
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # ========================================
+    # X-CONTENT-TYPE-OPTIONS
+    # ========================================
+    # Prevents MIME type sniffing attacks
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # ========================================
+    # REFERRER POLICY
+    # ========================================
+    # Controls referrer information sent with requests
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # ========================================
+    # PERMISSIONS POLICY
+    # ========================================
+    # Controls browser features and APIs
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self), sync-xhr=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), bluetooth=(), clipboard-read=(), clipboard-write=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), focus-without-user-activation=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), idle-detection=(), local-fonts=(), magnetometer=(), midi=(), otp-credentials=(), payment=(), picture-in-picture=(), publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), storage-access=(), usb=(), web-share=(), xr-spatial-tracking=()"
+    
+    # ========================================
+    # ADDITIONAL SECURITY HEADERS
+    # ========================================
+    
+    # X-XSS-Protection (legacy but still useful)
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # X-Download-Options (IE specific)
+    Header always set X-Download-Options "noopen"
+    
+    # X-Permitted-Cross-Domain-Policies
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+    
+    # Cross-Origin-Embedder-Policy
+    Header always set Cross-Origin-Embedder-Policy "require-corp"
+    
+    # Cross-Origin-Opener-Policy
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    
+    # Cross-Origin-Resource-Policy
+    Header always set Cross-Origin-Resource-Policy "same-origin"
+    
+    # Cache-Control for sensitive pages
+    <FilesMatch "\.(html|htm)$">
+        Header always set Cache-Control "no-cache, no-store, must-revalidate"
+        Header always set Pragma "no-cache"
+        Header always set Expires "0"
+    </FilesMatch>
+    
+    # Remove server information
+    Header always unset Server
+    Header always unset X-Powered-By
+    
+    # ========================================
+    # CSP REPORTING (OPTIONAL)
+    # ========================================
+    # Uncomment the line below to enable CSP violation reporting
+    # Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content; report-uri /csp-report;"
+</IfModule>
+
+# ========================================
+# ADDITIONAL APACHE SECURITY CONFIGURATIONS
+# ========================================
+
+# Disable server signature
+ServerTokens Prod
+ServerSignature Off
+
+# Hide Apache version
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{THE_REQUEST} \s/+([^?\s]*)\?[^\s]*\sHTTP [NC]
+    RewriteRule ^ /%1? [R=301,L]
+</IfModule>
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|conf)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory browsing
+Options -Indexes
+
+# Disable server signature in error pages
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.html [QSA,L]
+</IfModule>
+
+# Additional Security Headers
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Cache-Control "no-cache, no-store, must-revalidate"
+Header always set Pragma "no-cache"
+Header always set Expires "0"
+
+# Remove Server Information
+Header unset Server
+Header unset X-Powered-By
+
+# Force HTTPS (uncomment if you have SSL certificate)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
