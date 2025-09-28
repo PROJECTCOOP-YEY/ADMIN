@@ -1,0 +1,38 @@
+# Security Headers Configuration for Apache Server
+# Add these headers to your .htaccess file or server configuration
+
+# HTTP Strict Transport Security (HSTS)
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+# Content Security Policy (CSP) - Comprehensive
+Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content;"
+
+# CSP Report-Only (for testing)
+Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://presidential-car-museum-default-rtdb.asia-southeast1.firebasedatabase.app https://*.firebaseapp.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests; block-all-mixed-content; report-uri /csp-report;"
+
+# X-Frame-Options
+Header always set X-Frame-Options "SAMEORIGIN"
+
+# X-Content-Type-Options
+Header always set X-Content-Type-Options "nosniff"
+
+# Referrer Policy
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+# Permissions Policy
+Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self), sync-xhr=()"
+
+# Additional Security Headers
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Cache-Control "no-cache, no-store, must-revalidate"
+Header always set Pragma "no-cache"
+Header always set Expires "0"
+
+# Remove Server Information
+Header unset Server
+Header unset X-Powered-By
+
+# Force HTTPS (uncomment if you have SSL certificate)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
