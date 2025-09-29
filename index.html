@@ -37,6 +37,21 @@
     }
   </style>
 </head>
+
+<!-- Security Headers via Meta -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.gstatic.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+               font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+               img-src 'self' data: blob:;
+               connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.gstatic.com;
+               object-src 'none';
+               frame-ancestors 'self'">
+<meta http-equiv="Referrer-Policy" content="no-referrer-when-downgrade">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+
 <body class="min-h-screen text-gray-100">
   <!-- Login Section -->
   <div id="login-section" class="max-w-sm mx-auto mt-24 bg-slate-900/70 backdrop-blur p-8 rounded-2xl shadow-2xl border border-slate-700">
@@ -1795,12 +1810,10 @@ window.changeSuperAdminPassword = changeSuperAdminPassword;
       console.log('Testing timer...');
       lockNow(10000); // Lock for 10 seconds for testing
     };
-
+    
     // ============================================================================
     // END OF JAVASCRIPT MODULE
     // ============================================================================
   </script>  
 </body>
 </html>
-
-
