@@ -277,6 +277,17 @@ function refreshUI() {
           <td class="py-3 px-6">${fmtTime(item.timestamp || item.time || item.dateTime)}</td>
           <td class="py-3 px-6">${fmtDate(item.timestamp || item.time || item.dateTime)}</td>
           <td class="py-3 px-6"><span class="text-slate-400 text-xs">—</span></td>`;
+        // Add delete button for students
+        const tdAction = tr.querySelector('td:last-child');
+        if (tdAction) {
+          tdAction.innerHTML = `<button class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded text-xs">Delete</button>`;
+          const deleteBtn = tdAction.querySelector('button');
+          deleteBtn.addEventListener('click', () => {
+            if (confirm(`Delete student '${escapeHtml(item.nickname || item.name || item.fullname || '—')}'?`)) {
+              deleteStudent(item.id);
+            }
+          });
+        }
         studentTbody.appendChild(tr);
       }
     }
@@ -291,6 +302,17 @@ function refreshUI() {
           <td class="py-3 px-6">${fmtTime(item.timestamp || item.time || item.dateTime)}</td>
           <td class="py-3 px-6">${fmtDate(item.timestamp || item.time || item.dateTime)}</td>
           <td class="py-3 px-6"><span class="text-slate-400 text-xs">—</span></td>`;
+        // Add delete button for visitors
+        const tdAction = tr.querySelector('td:last-child');
+        if (tdAction) {
+          tdAction.innerHTML = `<button class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded text-xs">Delete</button>`;
+          const deleteBtn = tdAction.querySelector('button');
+          deleteBtn.addEventListener('click', () => {
+            if (confirm(`Delete visitor '${escapeHtml(item.nickname || item.name || item.fullname || '—')}'?`)) {
+              deleteVisitor(item.id);
+            }
+          });
+        }
         visitorTbody.appendChild(tr);
       }
     }
@@ -542,21 +564,34 @@ function populateUnlockRequests(data) {
 
     const tdAction = document.createElement("td");
     tdAction.className = "py-3 px-6";
-    tdAction.innerHTML = `<button class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs">Approve</button>`;
+    tdAction.innerHTML = `
+      <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs mr-2">Approve</button>
+      <button class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded text-xs">Reject</button>
+    `;
 
     tr.append(tdReqId, tdClient, tdUsername, tdRequested, tdStatus, tdAction);
     tbody.appendChild(tr);
   }
 
-  // Attach approve event listeners after populating unlock requests
-  const approveBtns = document.querySelectorAll('#unlock-req-table-body button');
-  approveBtns.forEach((btn, idx) => {
-    const reqId = Object.keys(data)[idx];
-    btn.addEventListener('click', () => {
-      if (confirm(`Approve unlock request '${reqId}'?`)) {
-        approveUnlockRequest(reqId);
-      }
-    });
+  // Attach approve/reject event listeners after populating unlock requests
+  const rows = tbody.querySelectorAll('tr');
+  Object.keys(data).forEach((reqId, idx) => {
+    const approveBtn = rows[idx]?.querySelector('button:nth-child(1)');
+    const rejectBtn = rows[idx]?.querySelector('button:nth-child(2)');
+    if (approveBtn) {
+      approveBtn.addEventListener('click', () => {
+        if (confirm(`Approve unlock request '${reqId}'?`)) {
+          approveUnlockRequest(reqId);
+        }
+      });
+    }
+    if (rejectBtn) {
+      rejectBtn.addEventListener('click', () => {
+        if (confirm(`Reject unlock request '${reqId}'?`)) {
+          rejectUnlockRequest(reqId);
+        }
+      });
+    }
   });
 }
 
@@ -743,5 +778,67 @@ async function approveUnlockRequest(reqId) {
   } catch (e) {
     console.error('Failed to approve unlock request:', e);
     alert('Failed to approve unlock request.');
+  }
+}
+
+// ====================== REJECT UNLOCK REQUEST FUNCTION ======================
+async function rejectUnlockRequest(reqId) {
+  if (!isSuperAdmin) {
+    alert('Only Super Admin can reject unlock requests.');
+    return;
+  }
+  if (!reqId) return;
+  try {
+    await update(ref(db, `unlock_requests/${reqId}`), { status: 'Rejected' });
+    alert(`Unlock request '${reqId}' rejected.`);
+  } catch (e) {
+    console.error('Failed to reject unlock request:', e);
+    alert('Failed to reject unlock request.');
+  }
+}
+
+// ====================== DELETE STUDENT FUNCTION ======================
+async function deleteStudent(studentId) {
+  if (!isAuthenticated) {
+    alert('You must be logged in to delete students.');
+    return;
+  }
+  if (!studentId) return;
+  try {
+    await remove(ref(db, `students/${studentId}`));
+    alert('Student deleted successfully.');
+  } catch (e) {
+    console.error('Failed to delete student:', e);
+    alert('Failed to delete student.');
+  }
+}
+
+// ====================== DELETE VISITOR FUNCTION ======================
+async function deleteVisitor(visitorId) {
+  if (!isAuthenticated) {
+    alert('You must be logged in to delete visitors.');
+    return;
+  }
+  if (!visitorId) return;
+  try {
+    await remove(ref(db, `visitors/${visitorId}`));
+    alert('Visitor deleted successfully.');
+  } catch (e) {
+    console.error('Failed to delete visitor:', e);
+    alert('Failed to delete visitor.');
+  }
+}
+
+// ====================== UPDATE SUPER ADMIN DISPLAY ======================
+function updateSuperAdminDisplay() {
+  // Display current username in Super Admin Settings tab
+  const usernameEl = document.getElementById('display-username');
+  if (usernameEl) {
+    usernameEl.textContent = currentUsername || '';
+  }
+  // Also update the input in the change-username form
+  const currentUsernameInput = document.getElementById('current-username');
+  if (currentUsernameInput) {
+    currentUsernameInput.value = currentUsername || '';
   }
 }
