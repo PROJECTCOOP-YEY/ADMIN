@@ -21,6 +21,7 @@ const firebaseConfig = {
 
 // ============================================================
 // Initialize Firebase
+
 // ============================================================
 let app, db, auth;
 try {
@@ -60,6 +61,69 @@ function updateConnectionStatus(message, color) {
     statusEl.innerHTML = `<span class="text-${color}-400">${message}</span>`;
   }
 }
+
+// Login Functions
+
+async function login(event) {
+  event.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const errorEl = document.getElementById("login-error");
+
+  errorEl.classList.add("hidden");
+
+  try {
+    // Hash the password before checking (matches your sha256 utility)
+    const hashed = await sha256(password);
+
+    // Check super admin
+    const saSnap = await get(superAdminRef);
+    const saData = saSnap.val();
+
+    if (saData && saData.username === username && saData.password === hashed) {
+      isSuperAdmin = true;
+      currentUsername = username;
+      document.getElementById("login-section").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      // Show superadmin-only tabs
+      document.getElementById("btn-unlocks").classList.remove("hidden");
+      document.getElementById("btn-sessions").classList.remove("hidden");
+      document.getElementById("btn-admins").classList.remove("hidden");
+      document.getElementById("btn-settings").classList.remove("hidden");
+
+      document.getElementById("welcome-label").textContent = `Welcome, Super Admin`;
+      return;
+    }
+
+    // Check regular admins
+    const adminSnap = await get(adminsRef);
+    const admins = adminSnap.val() || {};
+
+    if (admins[username] && admins[username].password === hashed) {
+      currentUsername = username;
+      document.getElementById("login-section").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      document.getElementById("welcome-label").textContent = `Welcome, Admin ${username}`;
+      return;
+    }
+
+    // Invalid credentials
+    errorEl.textContent = "Invalid credentials.";
+    errorEl.classList.remove("hidden");
+
+  } catch (err) {
+    console.error("Login error:", err);
+    errorEl.textContent = "Login failed. Try again.";
+    errorEl.classList.remove("hidden");
+  }
+}
+
+// Expose to HTML
+window.login = login;
+
 
 function hideLoadingScreen() {
   document.getElementById("loading-screen")?.classList.add("hidden");
