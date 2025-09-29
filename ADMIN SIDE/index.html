@@ -966,9 +966,25 @@
    */
   function lockNow(ms) {
     const duration = typeof ms === 'number' && ms > 0 ? ms : LOCK_MS;
-    setLockUntil(Date.now() + duration);
+    const lockUntil = Date.now() + duration;
+    setLockUntil(lockUntil);
     setAttempts(0);
+    
+    console.log('Account locked until:', new Date(lockUntil).toLocaleTimeString());
+    console.log('Lock duration:', Math.ceil(duration / 1000), 'seconds');
+    
+    // Start the countdown
     startLockCountdown();
+    
+    // Fallback: Set a timeout to re-enable login (in case countdown fails)
+    setTimeout(() => {
+      if (isLocked()) {
+        console.log('Fallback: Re-enabling login after lock period');
+        setLoginDisabled(false);
+        setSuperAdminRequestVisible(false);
+        clearError();
+      }
+    }, duration + 1000); // Add 1 second buffer
   }
   
   /**
@@ -976,31 +992,41 @@
    * Updates the error message every second with remaining time
    */
   function startLockCountdown() {
+    console.log('Starting lock countdown...');
+    
     const updateCountdown = () => {
-      if (!isLocked()) {
-        // Lock expired, re-enable login
-        setLoginDisabled(false);
-        setSuperAdminRequestVisible(false);
-        clearError();
-        return;
+      try {
+        if (!isLocked()) {
+          console.log('Lock expired, re-enabling login');
+          // Lock expired, re-enable login
+          setLoginDisabled(false);
+          setSuperAdminRequestVisible(false);
+          clearError();
+          return;
+        }
+        
+        const remaining = Math.max(0, getLockUntil() - Date.now());
+        const totalSeconds = Math.ceil(remaining / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        
+        let timeString;
+        if (minutes > 0) {
+          timeString = `${minutes}m ${seconds}s`;
+        } else {
+          timeString = `${seconds}s`;
+        }
+        
+        console.log('Countdown update:', timeString);
+        showError(`Invalid credentials. Account locked for ${timeString}`);
+        
+        // Continue countdown
+        setTimeout(updateCountdown, 1000);
+      } catch (error) {
+        console.error('Countdown error:', error);
+        // Fallback: just show a generic message
+        showError('Invalid credentials. Account locked. Please refresh the page.');
       }
-      
-      const remaining = Math.max(0, getLockUntil() - Date.now());
-      const totalSeconds = Math.ceil(remaining / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
-      
-      let timeString;
-      if (minutes > 0) {
-        timeString = `${minutes}m ${seconds}s`;
-      } else {
-        timeString = `${seconds}s`;
-      }
-      
-      showError(`Invalid credentials. Account locked for ${timeString}`);
-      
-      // Continue countdown
-      setTimeout(updateCountdown, 1000);
     };
     
     // Start the countdown
@@ -1763,6 +1789,12 @@ window.changeSuperAdminPassword = changeSuperAdminPassword;
     
     // Start the application
     initializeApplication();
+    
+    // Test function for debugging timer (remove in production)
+    window.testTimer = function() {
+      console.log('Testing timer...');
+      lockNow(10000); // Lock for 10 seconds for testing
+    };
     
     // ============================================================================
     // END OF JAVASCRIPT MODULE
