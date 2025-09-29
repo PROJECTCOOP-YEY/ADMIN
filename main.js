@@ -497,6 +497,15 @@ function populateAdmins(data) {
 
     tr.append(tdUser, tdCreated, tdAction);
     tbody.appendChild(tr);
+    // Attach delete event
+    const deleteBtn = tdAction.querySelector('button');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete admin '${username}'?`)) {
+          deleteAdmin(username);
+        }
+      });
+    }
   }
 }
 
@@ -538,6 +547,17 @@ function populateUnlockRequests(data) {
     tr.append(tdReqId, tdClient, tdUsername, tdRequested, tdStatus, tdAction);
     tbody.appendChild(tr);
   }
+
+  // Attach approve event listeners after populating unlock requests
+  const approveBtns = document.querySelectorAll('#unlock-req-table-body button');
+  approveBtns.forEach((btn, idx) => {
+    const reqId = Object.keys(data)[idx];
+    btn.addEventListener('click', () => {
+      if (confirm(`Approve unlock request '${reqId}'?`)) {
+        approveUnlockRequest(reqId);
+      }
+    });
+  });
 }
 
 // ====================== POPULATE ADMIN SESSIONS ======================
@@ -571,5 +591,157 @@ function populateAdminSessions(data) {
 
     tr.append(tdId, tdUser, tdIn, tdOut);
     tbody.appendChild(tr);
+  }
+}
+
+ // Super Admin Settings Functions
+ async function changeSuperAdminUsername(event) {
+  event.preventDefault();
+  if (!requireSuperAdmin()) return;
+  
+  const newUsername = document.getElementById('new-username').value.trim();
+  if (!newUsername) {
+    alert('Please enter a new username');
+    return;
+  }
+  
+  if (newUsername.toLowerCase() === 'superadmin') {
+    alert('Cannot use "superadmin" as username');
+    return;
+  }
+  
+  try {
+    // Get current superadmin data
+    const saSnap = await get(superAdminRef);
+    if (!saSnap.exists()) {
+      alert('Superadmin account not found');
+      return;
+    }
+    
+    const currentData = saSnap.val();
+    
+    // Update username
+    await update(superAdminRef, {
+      username: newUsername,
+      updatedAt: Date.now()
+    });
+    
+    alert(`Username changed successfully to "${newUsername}". You will need to log in again.`);
+    
+    // Clear form
+    document.getElementById('new-username').value = '';
+    
+    // Update display
+    updateSuperAdminDisplay();
+    
+    // Logout after 2 seconds
+    setTimeout(() => {
+      logout();
+    }, 2000);
+    
+  } catch (e) {
+    console.error(e);
+    alert('Failed to change username');
+  }
+}
+
+async function changeSuperAdminPassword(event) {
+  event.preventDefault();
+  if (!requireSuperAdmin()) return;
+  
+  const currentPassword = document.getElementById('current-password').value;
+  const newPassword = document.getElementById('new-password').value;
+  const confirmPassword = document.getElementById('confirm-password').value;
+  
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    alert('Please fill in all password fields');
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    alert('New passwords do not match');
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    alert('New password must be at least 6 characters long');
+    return;
+  }
+  
+  try {
+    // Get current superadmin data
+    const saSnap = await get(superAdminRef);
+    if (!saSnap.exists()) {
+      alert('Superadmin account not found');
+      return;
+    }
+    
+    const currentData = saSnap.val();
+    const currentHash = (currentData?.passwordHash || '').trim().toLowerCase();
+    
+    // Verify current password
+    const inputHash = (await sha256(currentPassword)).toLowerCase();
+    if (inputHash !== currentHash) {
+      alert('Current password is incorrect');
+      return;
+    }
+    
+    // Update password
+    const newHash = (await sha256(newPassword)).toLowerCase();
+    await update(superAdminRef, {
+      passwordHash: newHash,
+      updatedAt: Date.now()
+    });
+    
+    alert('Password changed successfully. You will need to log in again.');
+    
+    // Clear form
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    
+    // Update display
+    updateSuperAdminDisplay();
+    
+    // Logout after 2 seconds
+    setTimeout(() => {
+      logout();
+    }, 2000);
+    
+  } catch (e) {
+    console.error(e);
+    alert('Failed to change password');
+  }
+}
+
+// ====================== DELETE ADMIN FUNCTION ======================
+async function deleteAdmin(username) {
+  if (!isSuperAdmin) {
+    alert('Only Super Admin can delete admins.');
+    return;
+  }
+  if (!username) return;
+  try {
+    await remove(ref(db, `admins/${username}`));
+    alert(`Admin '${username}' deleted successfully.`);
+  } catch (e) {
+    console.error('Failed to delete admin:', e);
+    alert('Failed to delete admin.');
+  }
+}
+
+// ====================== APPROVE UNLOCK REQUEST FUNCTION ======================
+async function approveUnlockRequest(reqId) {
+  if (!isSuperAdmin) {
+    alert('Only Super Admin can approve unlock requests.');
+    return;
+  }
+  if (!reqId) return;
+  try {
+    await update(ref(db, `unlock_requests/${reqId}`), { status: 'Approved' });
+    alert(`Unlock request '${reqId}' approved.`);
+  } catch (e) {
+    console.error('Failed to approve unlock request:', e);
+    alert('Failed to approve unlock request.');
   }
 }
