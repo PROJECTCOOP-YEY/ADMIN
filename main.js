@@ -74,43 +74,43 @@ async function login(event) {
   errorEl.classList.add("hidden");
 
   try {
-    // Hash the password before checking (matches your sha256 utility)
     const hashed = await sha256(password);
 
-    // Check super admin
+    // Check super admin (support hashed or plaintext storage)
     const saSnap = await get(superAdminRef);
     const saData = saSnap.val();
-
-    if (saData && saData.username === username && saData.password === hashed) {
+    const saPass = saData?.password || saData?.passwordHash;
+    const isSaMatch = saData
+      && saData.username === username
+      && (saPass === hashed || saPass === password);
+    if (isSaMatch) {
       isSuperAdmin = true;
       currentUsername = username;
       document.getElementById("login-section").classList.add("hidden");
       document.getElementById("dashboard").classList.remove("hidden");
-
-      // Show superadmin-only tabs
       document.getElementById("btn-unlocks").classList.remove("hidden");
       document.getElementById("btn-sessions").classList.remove("hidden");
       document.getElementById("btn-admins").classList.remove("hidden");
       document.getElementById("btn-settings").classList.remove("hidden");
-
       document.getElementById("welcome-label").textContent = `Welcome, Super Admin`;
       return;
     }
 
-    // Check regular admins
+    // Check regular admins (case-insensitive username, support hashed/plain fields)
     const adminSnap = await get(adminsRef);
     const admins = adminSnap.val() || {};
-
-    if (admins[username] && admins[username].passwordHash === hashed) {
-      currentUsername = username;
+    const usernameKey = Object.keys(admins).find(k => k.toLowerCase() === username.toLowerCase());
+    const adminRecord = usernameKey ? admins[usernameKey] : undefined;
+    const adminPass = adminRecord?.passwordHash || adminRecord?.password;
+    const isAdminMatch = adminRecord && (adminPass === hashed || adminPass === password);
+    if (isAdminMatch) {
+      currentUsername = usernameKey;
       document.getElementById("login-section").classList.add("hidden");
       document.getElementById("dashboard").classList.remove("hidden");
-
-      document.getElementById("welcome-label").textContent = `Welcome, Admin ${username}`;
+      document.getElementById("welcome-label").textContent = `Welcome, Admin ${usernameKey}`;
       return;
     }
 
-    // Invalid credentials
     errorEl.textContent = "Invalid credentials.";
     errorEl.classList.remove("hidden");
 
@@ -242,6 +242,68 @@ initializeApplication();
 window.showError = showError;
 window.sha256 = sha256;
 
+// ============================================================
+// UI Refresh (Counts + Tables)
+// ============================================================
+function refreshUI() {
+  try {
+    const students = combinedData.filter(x => x._roleNorm === "student");
+    const visitors = combinedData.filter(x => x._roleNorm === "visitor");
+
+    const studentCountEl = document.getElementById("studentCount");
+    const visitorCountEl = document.getElementById("visitorCount");
+    const totalCountEl = document.getElementById("totalCount");
+
+    if (studentCountEl) studentCountEl.textContent = String(students.length);
+    if (visitorCountEl) visitorCountEl.textContent = String(visitors.length);
+    if (totalCountEl) totalCountEl.textContent = String(students.length + visitors.length);
+
+    // Tables
+    const studentTbody = document.getElementById("student-table-body");
+    const visitorTbody = document.getElementById("visitor-table-body");
+
+    if (studentTbody) {
+      studentTbody.innerHTML = "";
+      for (const item of students) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-3 px-6">${escapeHtml(item.nickname || item.name || item.fullname || "—")}</td>
+          <td class="py-3 px-6">${escapeHtml(item.location || item.address || "—")}</td>
+          <td class="py-3 px-6">${fmtTime(item.timestamp || item.time || item.dateTime)}</td>
+          <td class="py-3 px-6">${fmtDate(item.timestamp || item.time || item.dateTime)}</td>
+          <td class="py-3 px-6"><span class="text-slate-400 text-xs">—</span></td>`;
+        studentTbody.appendChild(tr);
+      }
+    }
+
+    if (visitorTbody) {
+      visitorTbody.innerHTML = "";
+      for (const item of visitors) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-3 px-6">${escapeHtml(item.nickname || item.name || item.fullname || "—")}</td>
+          <td class="py-3 px-6">${escapeHtml(item.location || item.address || "—")}</td>
+          <td class="py-3 px-6">${fmtTime(item.timestamp || item.time || item.dateTime)}</td>
+          <td class="py-3 px-6">${fmtDate(item.timestamp || item.time || item.dateTime)}</td>
+          <td class="py-3 px-6"><span class="text-slate-400 text-xs">—</span></td>`;
+        visitorTbody.appendChild(tr);
+      }
+    }
+
+  } catch (e) {
+    console.error("refreshUI error:", e);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 // ====================== POPULATE ADMINS ======================
 function populateAdmins(data) {
   const tbody = document.getElementById("admins-table-body");
@@ -343,4 +405,3 @@ function populateAdminSessions(data) {
     tbody.appendChild(tr);
   }
 }
-
