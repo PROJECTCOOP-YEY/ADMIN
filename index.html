@@ -1796,22 +1796,11 @@ window.changeSuperAdminPassword = changeSuperAdminPassword;
       lockNow(10000); // Lock for 10 seconds for testing
     };
 
-    const helmet = require('helmet');
-app.use(helmet({
-  contentSecurityPolicy: false, // or configure CSP here
-}));
-app.use((req, res, next) => {
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
-  next();
-});
-
-    
     // ============================================================================
     // END OF JAVASCRIPT MODULE
     // ============================================================================
   </script>  
 </body>
 </html>
+
 
