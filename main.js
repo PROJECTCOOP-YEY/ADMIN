@@ -101,7 +101,7 @@ async function login(event) {
     const adminSnap = await get(adminsRef);
     const admins = adminSnap.val() || {};
 
-    if (admins[username] && admins[username].password === hashed) {
+    if (admins[username] && admins[username].passwordHash === hashed) {
       currentUsername = username;
       document.getElementById("login-section").classList.add("hidden");
       document.getElementById("dashboard").classList.remove("hidden");
