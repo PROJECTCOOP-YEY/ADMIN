@@ -96,6 +96,8 @@ async function login(event) {
       document.getElementById("btn-admins").classList.remove("hidden");
       document.getElementById("btn-settings").classList.remove("hidden");
       document.getElementById("welcome-label").textContent = `Welcome, Super Admin`;
+      updateSuperAdminDisplay();
+      startInactivityTimer();
       return;
     }
 
@@ -111,6 +113,8 @@ async function login(event) {
       document.getElementById("login-section").classList.add("hidden");
       document.getElementById("dashboard").classList.remove("hidden");
       document.getElementById("welcome-label").textContent = `Welcome, Admin ${usernameKey}`;
+      updateSuperAdminDisplay();
+      startInactivityTimer();
       return;
     }
 
@@ -386,6 +390,7 @@ function logout() {
 
     // Default to home tab when back in dashboard
     showTab('home');
+    stopInactivityTimer();
   } catch (e) {
     console.error('logout error:', e);
   }
@@ -668,6 +673,7 @@ function populateAdminSessions(data) {
     
     // Update display
     updateSuperAdminDisplay();
+    startInactivityTimer();
     
     // Logout after 2 seconds
     setTimeout(() => {
@@ -737,6 +743,7 @@ async function changeSuperAdminPassword(event) {
     
     // Update display
     updateSuperAdminDisplay();
+    startInactivityTimer();
     
     // Logout after 2 seconds
     setTimeout(() => {
@@ -841,4 +848,39 @@ function updateSuperAdminDisplay() {
   if (currentUsernameInput) {
     currentUsernameInput.value = currentUsername || '';
   }
+}
+
+// ====================== AUTO LOGOUT SESSION ======================
+let inactivityTimeout = null;
+let lastActivityTime = Date.now();
+
+function getAutoLogoutDuration() {
+  // 4 seconds for superadmin, 30 seconds for admin
+  return isSuperAdmin ? 4000 : 30000;
+}
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimeout);
+  lastActivityTime = Date.now();
+  if (isAuthenticated) {
+    inactivityTimeout = setTimeout(() => {
+      alert('Session expired due to inactivity. You will be logged out.');
+      logout();
+    }, getAutoLogoutDuration());
+  }
+}
+
+// Listen for user activity
+['mousemove', 'keydown', 'mousedown', 'touchstart'].forEach(evt => {
+  window.addEventListener(evt, resetInactivityTimer, true);
+});
+
+// Start timer after login
+function startInactivityTimer() {
+  resetInactivityTimer();
+}
+
+// Stop timer on logout
+function stopInactivityTimer() {
+  clearTimeout(inactivityTimeout);
 }
