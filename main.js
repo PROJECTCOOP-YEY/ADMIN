@@ -44,6 +44,9 @@ let isSuperAdmin = false;
 let superAdminIdle = false;
 let currentUsername = null;
 let currentAdminSessionKey = null;
+let roleChartInstance = null;
+let timeChartInstance = null;
+let dateChartInstance = null;
 
 const studentsRef = ref(db, "students");
 const visitorsRef = ref(db, "visitors");
@@ -241,6 +244,8 @@ initializeApplication();
 // Expose functions needed in HTML
 window.showError = showError;
 window.sha256 = sha256;
+window.showTab = showTab;
+window.logout = logout;
 
 // ============================================================
 // UI Refresh (Counts + Tables)
@@ -293,6 +298,9 @@ function refreshUI() {
   } catch (e) {
     console.error("refreshUI error:", e);
   }
+
+  // Update charts after counts/tables
+  try { renderCharts(); } catch (e) { console.error("renderCharts error:", e); }
 }
 
 function escapeHtml(value) {
@@ -302,6 +310,166 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+// ============================================================
+// Tabs + Logout
+// ============================================================
+function showTab(tabName, event) {
+  try {
+    if (event?.preventDefault) event.preventDefault();
+
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    // Show selected
+    const active = document.getElementById(`tab-${tabName}`);
+    if (active) active.classList.remove('hidden');
+
+    // Update button styles
+    const activeClasses = ['bg-indigo-600', 'text-white'];
+    const inactiveClasses = ['text-slate-200'];
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove(...activeClasses);
+      if (!btn.classList.contains('hidden')) btn.classList.add(...inactiveClasses);
+    });
+    if (event?.currentTarget) {
+      const btn = event.currentTarget;
+      btn.classList.remove(...inactiveClasses);
+      btn.classList.add(...activeClasses);
+    }
+  } catch (e) {
+    console.error('showTab error:', e);
+  }
+}
+
+function logout() {
+  try {
+    isSuperAdmin = false;
+    isAuthenticated = false;
+    currentUsername = null;
+
+    // Simple UI reset
+    document.getElementById('dashboard')?.classList.add('hidden');
+    document.getElementById('login-section')?.classList.remove('hidden');
+    const u = document.getElementById('username');
+    const p = document.getElementById('password');
+    if (u) u.value = '';
+    if (p) p.value = '';
+
+    // Hide superadmin-only tabs next time
+    document.getElementById('btn-unlocks')?.classList.add('hidden');
+    document.getElementById('btn-sessions')?.classList.add('hidden');
+    document.getElementById('btn-admins')?.classList.add('hidden');
+    document.getElementById('btn-settings')?.classList.add('hidden');
+
+    // Default to home tab when back in dashboard
+    showTab('home');
+  } catch (e) {
+    console.error('logout error:', e);
+  }
+}
+
+// ============================================================
+// Charts (Chart.js)
+// ============================================================
+function renderCharts() {
+  const byRole = aggregateByRole(combinedData);
+  const byHour = aggregateByHour(combinedData);
+  const byDay = aggregateByDay(combinedData);
+
+  // Role Chart
+  const roleCtx = document.getElementById('roleChart')?.getContext?.('2d');
+  if (roleCtx) {
+    if (roleChartInstance) roleChartInstance.destroy();
+    roleChartInstance = new window.Chart(roleCtx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(byRole),
+        datasets: [{
+          data: Object.values(byRole),
+          backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+        }]
+      },
+      options: { plugins: { legend: { labels: { color: '#e5e7eb' } } } }
+    });
+  }
+
+  // Time (by hour) Chart
+  const timeCtx = document.getElementById('timeChart')?.getContext?.('2d');
+  if (timeCtx) {
+    const labels = [...Array(24).keys()].map(h => h.toString().padStart(2, '0'));
+    const values = labels.map(h => byHour[h] || 0);
+    if (timeChartInstance) timeChartInstance.destroy();
+    timeChartInstance = new window.Chart(timeCtx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Visits', data: values, backgroundColor: '#22c55e' }] },
+      options: {
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.15)' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.15)' } }
+        },
+        plugins: { legend: { labels: { color: '#e5e7eb' } } }
+      }
+    });
+  }
+
+  // Date (by weekday) Chart
+  const dateCtx = document.getElementById('dateChart')?.getContext?.('2d');
+  if (dateCtx) {
+    const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const values = labels.map((_, i) => byDay[i] || 0);
+    if (dateChartInstance) dateChartInstance.destroy();
+    dateChartInstance = new window.Chart(dateCtx, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Visits', data: values, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.25)', tension: 0.35, fill: true }] },
+      options: {
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }
+        },
+        plugins: { legend: { labels: { color: '#e5e7eb' } } }
+      }
+    });
+  }
+}
+
+function coerceTimestamp(value) {
+  if (!value) return null;
+  const n = Number(value);
+  if (!Number.isNaN(n)) return n;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.getTime();
+}
+
+function aggregateByRole(items) {
+  const counts = {};
+  for (const it of items) {
+    const role = it.role || it._roleNorm || 'visitor';
+    counts[role] = (counts[role] || 0) + 1;
+  }
+  return counts;
+}
+
+function aggregateByHour(items) {
+  const counts = {};
+  for (const it of items) {
+    const ts = coerceTimestamp(it.timestamp || it.time || it.date || it.dateTime);
+    if (ts == null) continue;
+    const hour = new Date(ts).getHours().toString().padStart(2, '0');
+    counts[hour] = (counts[hour] || 0) + 1;
+  }
+  return counts;
+}
+
+function aggregateByDay(items) {
+  const counts = {};
+  for (const it of items) {
+    const ts = coerceTimestamp(it.timestamp || it.time || it.date || it.dateTime);
+    if (ts == null) continue;
+    const day = new Date(ts).getDay(); // 0-6
+    counts[day] = (counts[day] || 0) + 1;
+  }
+  return counts;
 }
 
 // ====================== POPULATE ADMINS ======================
