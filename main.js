@@ -400,7 +400,8 @@ function logout() {
 // Charts (Chart.js)
 // ============================================================
 function renderCharts() {
-  const byRole = aggregateByRole(combinedData);
+  // Only include visitors for the role chart
+  const byRole = aggregateByRole(combinedData.filter(x => x._roleNorm === 'visitor'));
   const byHour = aggregateByHour(combinedData);
   const byDay = aggregateByDay(combinedData);
 
