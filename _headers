@@ -1,4 +1,5 @@
 /*
+ X-Test-Header: hello
   Content-Security-Policy: default-src 'self';
     script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://www.gstatic.com https://fonts.googleapis.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
