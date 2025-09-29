@@ -177,3 +177,106 @@ initializeApplication();
 // Expose functions needed in HTML
 window.showError = showError;
 window.sha256 = sha256;
+
+// ====================== POPULATE ADMINS ======================
+function populateAdmins(data) {
+  const tbody = document.getElementById("admins-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  for (const [username, adminData] of Object.entries(data)) {
+    const tr = document.createElement("tr");
+
+    const tdUser = document.createElement("td");
+    tdUser.className = "py-3 px-6";
+    tdUser.textContent = username;
+
+    const tdCreated = document.createElement("td");
+    tdCreated.className = "py-3 px-6";
+    tdCreated.textContent = adminData.createdAt
+      ? new Date(adminData.createdAt).toLocaleString()
+      : "—";
+
+    const tdAction = document.createElement("td");
+    tdAction.className = "py-3 px-6";
+    tdAction.innerHTML = `<button class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded text-xs">Delete</button>`;
+
+    tr.append(tdUser, tdCreated, tdAction);
+    tbody.appendChild(tr);
+  }
+}
+
+// ====================== POPULATE UNLOCK REQUESTS ======================
+function populateUnlockRequests(data) {
+  const tbody = document.getElementById("unlock-req-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  for (const [reqId, reqData] of Object.entries(data)) {
+    const tr = document.createElement("tr");
+
+    const tdReqId = document.createElement("td");
+    tdReqId.className = "py-3 px-6";
+    tdReqId.textContent = reqId;
+
+    const tdClient = document.createElement("td");
+    tdClient.className = "py-3 px-6";
+    tdClient.textContent = reqData.client || "—";
+
+    const tdUsername = document.createElement("td");
+    tdUsername.className = "py-3 px-6";
+    tdUsername.textContent = reqData.username || "—";
+
+    const tdRequested = document.createElement("td");
+    tdRequested.className = "py-3 px-6";
+    tdRequested.textContent = reqData.requestedAt
+      ? new Date(reqData.requestedAt).toLocaleString()
+      : "—";
+
+    const tdStatus = document.createElement("td");
+    tdStatus.className = "py-3 px-6";
+    tdStatus.textContent = reqData.status || "Pending";
+
+    const tdAction = document.createElement("td");
+    tdAction.className = "py-3 px-6";
+    tdAction.innerHTML = `<button class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs">Approve</button>`;
+
+    tr.append(tdReqId, tdClient, tdUsername, tdRequested, tdStatus, tdAction);
+    tbody.appendChild(tr);
+  }
+}
+
+// ====================== POPULATE ADMIN SESSIONS ======================
+function populateAdminSessions(data) {
+  const tbody = document.getElementById("admin-session-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  for (const [sessionId, sessionData] of Object.entries(data)) {
+    const tr = document.createElement("tr");
+
+    const tdId = document.createElement("td");
+    tdId.className = "py-3 px-6";
+    tdId.textContent = sessionId;
+
+    const tdUser = document.createElement("td");
+    tdUser.className = "py-3 px-6";
+    tdUser.textContent = sessionData.username || "—";
+
+    const tdIn = document.createElement("td");
+    tdIn.className = "py-3 px-6";
+    tdIn.textContent = sessionData.timeIn
+      ? new Date(sessionData.timeIn).toLocaleString()
+      : "—";
+
+    const tdOut = document.createElement("td");
+    tdOut.className = "py-3 px-6";
+    tdOut.textContent = sessionData.timeOut
+      ? new Date(sessionData.timeOut).toLocaleString()
+      : "—";
+
+    tr.append(tdId, tdUser, tdIn, tdOut);
+    tbody.appendChild(tr);
+  }
+}
+
